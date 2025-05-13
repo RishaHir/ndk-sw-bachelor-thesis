@@ -6,6 +6,8 @@
 # Author(s):
 #   Martin Spinler <spinler@cesnet.cz
 #
+# Modified by Richard Hyroš
+# for the purpose of bachelor thesis submission
 
 cmake_minimum_required(VERSION 3.15)
 cmake_policy(VERSION 3.15)
@@ -26,28 +28,8 @@ pkg_check_modules(ARCHIVE REQUIRED libarchive)
 ndk_check_build_dependency(FDT_LIBRARIES fdt FDT_INCLUDE_DIRS libfdt.h libfdt)
 ndk_check_build_dependency(NUMA_LIBRARIES numa NUMA_INCLUDE_DIRS numa.h)
 
-link_libraries(nfb ${FDT_LIBRARIES})
+link_libraries(nfb_static ${FDT_LIBRARIES})
 include_directories(${CMAKE_CURRENT_LIST_DIR}/../drivers/kernel/include)
-
-add_executable(nfb-info info/info.c)
-target_compile_definitions(nfb-info PRIVATE PACKAGE_VERSION="${PACKAGE_VERSION}-${GIT_VERSION_RELEASE}")
-
-add_executable(nfb-boot boot/boot.c)
-target_link_libraries(nfb-boot PRIVATE ${ARCHIVE_LIBRARIES} z)
-
-add_executable(nfb-bus bus/bus.c)
-
-add_executable(nfb-dma dma/dma.c)
-
-add_executable(nfb-eth
-	eth/cfp2.c eth/ieee802_3.c eth/main.c eth/pcspma.c eth/qsfpp.c
-	eth/query.c eth/rxmac.c eth/transceiver.c eth/txmac.c
-)
-target_link_libraries(nfb-eth PRIVATE m)
-
-add_executable(nfb-tsu tsu/tsu.c)
-
-add_executable(nfb-mdio mdio/mdio.c)
 
 add_executable(ndp-tool
 	ndptool/common.c ndptool/generate.c ndptool/loopback.c
@@ -55,14 +37,11 @@ add_executable(ndp-tool
 	ndptool/read.c ndptool/receive.c ndptool/stats.c ndptool/transmit.c
 )
 
-set (PIE_TARGETS nfb-info nfb-boot nfb-bus nfb-dma nfb-eth nfb-tsu nfb-mdio ndp-tool)
+set (PIE_TARGETS ndp-tool)
 foreach(PIE_TARGET IN LISTS PIE_TARGETS)
 	set_property(TARGET ${PIE_TARGET} PROPERTY POSITION_INDEPENDENT_CODE TRUE)
 endforeach()
 
-target_link_libraries(nfb-boot
-	PRIVATE ${CMAKE_THREAD_LIBS_INIT}
-)
 
 target_compile_options(ndp-tool PRIVATE -O3 -funroll-loops)
 target_link_libraries(ndp-tool
@@ -78,7 +57,7 @@ foreach(NDP_TARGET IN LISTS NDP_TARGETS)
 endforeach()
 
 install(
-	TARGETS nfb-boot nfb-bus nfb-dma nfb-eth nfb-info nfb-mdio nfb-tsu ndp-tool
+	TARGETS ndp-tool
 	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
@@ -133,4 +112,50 @@ if(USE_DPDK)
 	endforeach()
 else()
 	message("ndp-tool: DPDK portion of the app not enabled use -DUSE_DPDK=true with cmake if you want to compile with DPDK")
+endif()
+
+if(USE_XDP)
+	message("ndp-tool: XDP portion of the app is enabled use -UUSE_XDP with cmake if you don't want to compile with XDP")
+	pkg_check_modules(XDP REQUIRED libxdp)
+	pkg_check_modules(BPF REQUIRED libbpf)
+
+	add_executable(ndp-tool-xdp
+	ndptool/common.c ndptool/generate.c ndptool/loopback.c
+	ndptool/loopback_hw.c ndptool/main.c ndptool/modules.c ndptool/pcap.c
+	ndptool/read.c ndptool/receive.c ndptool/stats.c ndptool/transmit.c
+	ndptool/xdp/xdp_common.c ndptool/xdp/xdp_read.c ndptool/xdp/xdp_generate.c
+	)
+
+	set_property(TARGET ndp-tool-xdp PROPERTY POSITION_INDEPENDENT_CODE TRUE)
+
+	set(XDP_TARGETS xdp-generate xdp-read)
+
+	target_compile_options(ndp-tool-xdp PRIVATE -O3 -funroll-loops)
+	target_link_libraries(ndp-tool-xdp
+	PRIVATE ${NUMA_LIBRARIES} ${NCURSES_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${BPF_LIBRARIES} ${XDP_LIBRARIES}
+	)
+	target_compile_definitions(ndp-tool-xdp PRIVATE USE_XDP)
+
+	foreach(XDP_TARGET IN LISTS XDP_TARGETS)
+	add_custom_target(ndp-${XDP_TARGET}
+		ALL DEPENDS ndp-tool-xdp
+		COMMAND ${CMAKE_COMMAND} -E create_symlink ndp-tool-xdp ndp-${XDP_TARGET}
+	)
+	endforeach()
+
+	install(
+	TARGETS ndp-tool-xdp
+	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+	COMPONENT ndp-tool-xdp
+	)
+
+	foreach(XDP_TARGET IN LISTS XDP_TARGETS)
+	install(
+		FILES ${CMAKE_CURRENT_BINARY_DIR}/ndp-${XDP_TARGET}
+		DESTINATION ${CMAKE_INSTALL_BINDIR}
+		COMPONENT ndp-tool-xdp
+	)
+	endforeach()
+else()
+	message("ndp-tool: XDP portion of the app not enabled use -DUSE_XDP=true with cmake if you want to compile with XDP")
 endif()

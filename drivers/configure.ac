@@ -175,6 +175,54 @@ KERNEL_TRY_COMPILE([[
 void test(void);
 void test(void) {eventfd_signal(NULL);}]],[AC_DEFINE([CONFIG_HAVE_SIMPLIFIED_EVENTFD_SIGNAL], [1], [Define if kernel has simplified eventfd_signal]) AC_MSG_RESULT([yes])],[AC_MSG_RESULT([no])])
 
+# XDP
+AC_MSG_CHECKING([whether kernel has net/page_pool/helpers.h])
+KERNEL_TRY_COMPILE([[
+#include <net/page_pool/helpers.h>
+]],[AC_DEFINE([CONFIG_HAVE_PAGE_POOL_HELPERS], [1], [Define if kernel has net/page_pool/helpers.h]) AC_MSG_RESULT([yes])],[AC_MSG_RESULT([no])])
+
+AC_MSG_CHECKING([whether kernel has netif_napi_add_tx_weight])
+KERNEL_TRY_COMPILE([[
+#include <linux/netdevice.h>
+void test(void);
+void test(void) {netif_napi_add_tx_weight(NULL, NULL, NULL, NAPI_POLL_WEIGHT);}
+]],[AC_DEFINE([CONFIG_HAVE_NETIF_NAPI_ADD_TX_WEIGHT], [1], [Define if kernel has netif_napi_add_tx_weight]) AC_MSG_RESULT([yes])],[AC_MSG_RESULT([no])])
+
+AC_MSG_CHECKING([whether kernel has netif_napi_add with weight argument])
+KERNEL_TRY_COMPILE([[
+#include <linux/netdevice.h>
+void test(void);
+void test(void) {netif_napi_add(NULL, NULL, NULL, NAPI_POLL_WEIGHT);}
+]],[AC_DEFINE([CONFIG_HAVE_NETIF_NAPI_ADD_WITH_WEIGHT], [1], [Define if kernel has netif_napi_add with weight argument]) AC_MSG_RESULT([yes])],[AC_MSG_RESULT([no])])
+
+AC_MSG_CHECKING([whether kernel has xsk_buff_alloc_batch])
+KERNEL_TRY_COMPILE([[
+#include <net/xdp_sock_drv.h>
+void test(void);
+void test(void) {xsk_buff_alloc_batch(NULL, NULL, 64);}
+]],[AC_DEFINE([CONFIG_HAVE_XSK_BUFF_ALLOC_BATCH], [1], [Define if kernel has xsk_buff_alloc_batch]) AC_MSG_RESULT([yes])],[AC_MSG_RESULT([no])])
+
+AC_MSG_CHECKING([whether kernel has xsk_buff_set_size])
+KERNEL_TRY_COMPILE([[
+#include <net/xdp_sock_drv.h>
+void test(void);
+void test(void) {xsk_buff_set_size(NULL, 512);}
+]],[AC_DEFINE([CONFIG_HAVE_XSK_BUFF_SET_SIZE], [1], [Define if kernel has xsk_buff_set_size]) AC_MSG_RESULT([yes])],[AC_MSG_RESULT([no])])
+
+AC_MSG_CHECKING([whether kernel has xdp_set_features_flag])
+KERNEL_TRY_COMPILE([[
+#include <net/xdp.h>
+xdp_features_t val;
+void test(void);
+void test(void) {xdp_set_features_flag(NULL, val);}
+]],[AC_DEFINE([CONFIG_HAVE_XDP_SET_FEATURES_FLAG], [1], [Define if kernel has xdp_set_features_flag]) AC_MSG_RESULT([yes])],[AC_MSG_RESULT([no])])
+
+AC_MSG_CHECKING([whether kernel has xdp_features_t])
+KERNEL_TRY_COMPILE([[
+#include <net/xdp.h>
+xdp_features_t val;
+]],[AC_DEFINE([CONFIG_HAVE_XDP_FEATURES_T], [1], [Define if kernel has xdp_features_t]) AC_MSG_RESULT([yes])],[AC_MSG_RESULT([no])])
+
 AC_SUBST(KDIR)
 AC_SUBST(KSRC)
 

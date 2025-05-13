@@ -5,6 +5,9 @@
 #
 # Author(s):
 #   Martin Spinler <spinler@cesnet.cz
+#
+# Modified by Richard Hyroš
+# for the purpose of bachelor thesis submission
 
 function(ndk_check_build_dependency)
 	if (DEFINED "${ARGV0}")
@@ -32,8 +35,12 @@ function(get_git_version)
 	)
 
 	if (GIT_RETVAL)
-		message(WARNING "Cannot determine version from Git, trying .gitversion")
-		file(READ "${CMAKE_CURRENT_LIST_DIR}/.gitversion" GIT_VERSION)
+		message(STATUS  "Cannot determine version from Git, trying .gitversion")
+		if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/.gitversion")
+            file(READ "${CMAKE_CURRENT_LIST_DIR}/.gitversion" GIT_VERSION)
+        elseif(EXISTS "${CMAKE_SOURCE_DIR}/VERSION")
+            file(READ "${CMAKE_SOURCE_DIR}/VERSION" GIT_VERSION)
+        endif()
 	endif (GIT_RETVAL)
 
 	if (NOT GIT_VERSION)
@@ -65,6 +72,8 @@ function(get_git_version)
 
 	set(GIT_VERSION            ${VERSION}            PARENT_SCOPE)
 	set(GIT_VERSION_FULL       ${VERSION}-${RELEASE} PARENT_SCOPE)
+
+	set(GIT_VERSION_RELEASE    "thesis"     PARENT_SCOPE)
 endfunction ()
 
 # \brief Setup environment for NFB
